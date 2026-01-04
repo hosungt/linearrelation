@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>일차함수와 일차방정식의 관계 형성평가</title>
+
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#ffffff;
+      --ink:#111827;
+      --grid:#e5e7eb;
+      --axis:#111827;
+      --accent:#2563eb;
+      --good:#16a34a;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --line:#1d4ed8;
+    }
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:#f3f4f6;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Apple SD Gothic Neo, Roboto, Helvetica, Arial, "맑은 고딕", "Malgun Gothic";
+    }
+    .watermark{
+      position:fixed; right:20px; bottom:20px;
+      font-size:15px; color:#9ca3af; font-weight:600;
+      pointer-events:none; z-index:99;
+    }
+    .header{max-width:1100px; margin:20px auto 10px; padding:0 16px;}
+    .title{font-weight:800; font-size:clamp(20px,3.2vw,36px); letter-spacing:.5px;}
+    .modes{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;}
+    .mode-btn{
+      background:#1f2937; color:#e5e7eb; border:1px solid #374151;
+      padding:10px 14px; border-radius:10px; cursor:pointer;
+      transition:transform .05s ease, background .2s ease, border-color .2s ease;
+      font-size:15px;
+    }
+    .mode-btn:hover{background:#273247;}
+    .mode-btn.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+    .wrap{
+      max-width:1100px; margin:8px auto 28px; padding:0 16px;
+      display:grid; grid-template-columns: 1fr minmax(260px,380px);
+      gap:16px; align-items:start;
+    }
+    .card{
+      background:var(--panel); color:var(--ink);
+      border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+      padding:12px;
+    }
+    .canvas-wrap{width:100%; aspect-ratio:1/1; position:relative;}
+    canvas{
+      width:100%; height:100%; display:block;
+      border-radius:10px; border:2px solid #d1d5db; background:#fff;
+      touch-action:none;
+    }
+    .overlay{position:absolute; inset:8px; pointer-events:none; display:flex; align-items:start; justify-content:center;}
+    .toast{
+      margin-top:6px; background:rgba(255,255,255,.96); color:var(--ink);
+      border:1px solid #e5e7eb; border-radius:10px; padding:8px 12px; font-size:14px;
+      box-shadow:0 8px 24px rgba(0,0,0,.15); display:none;
+    }
+    .toast.ok{border-color:#bbf7d0;}
+    .toast.bad{border-color:#fecaca;}
+
+    /* 캔버스 위 KaTeX 수식 박스 */
+    .eq-formula{ position:absolute; pointer-events:none; display:none; z-index:3; }
+    .eqf-inner{ position:absolute; left:0; top:0; transform-origin:top left; white-space:nowrap; }
+    .katex .katex-mathml{display:none !important;}
+
+    .panel{
+      background:var(--panel); color:var(--ink);
+      border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+      padding:16px 16px 18px;
+    }
+    .panel h3{margin:2px 0 10px; font-size:18px; font-weight:800;}
+
+    .statbar{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 6px; font-size:14px; color:#374151;}
+    .chip{background:#f3f4f6; border:1px solid #e5e7eb; border-radius:999px; padding:6px 10px;}
+    .chip b{color:#111827;}
+
+    .hint{margin-top:8px; font-size:13px; color:#6b7280; line-height:1.35;}
+
+    .controls{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+    .btn{
+      border:1px solid #d1d5db; background:#111827; color:#fff;
+      padding:10px 12px; border-radius:10px; cursor:pointer; font-size:14px;
+    }
+    .btn.ghost{background:#fff; color:#111827;}
+    .btn:disabled{opacity:.4; cursor:not-allowed;}
+
+    .expr-row{
+      display:flex; align-items:center; gap:10px;
+      border:2px solid #d1d5db; border-radius:10px;
+      padding:12px; background:#fff; font-size:18px; line-height:1.2;
+    }
+    .expr-k{
+      width:7ch;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      text-align:center; border:none; outline:none; font-size:18px; color:var(--ink); background:transparent;
+    }
+    .expr-const{ width:7ch; }
+
+    .confirm{ margin-top:10px; padding:10px; border:1px dashed #d1d5db; border-radius:10px; display:none; }
+    .confirm p{margin:0 0 8px; font-weight:700;}
+
+    #leaderboardPanel{width:100%; box-sizing:border-box;}
+    @media (max-width:840px){ .wrap{grid-template-columns:1fr;} }
+  </style>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+</head>
+
+<body>
+  <div class="header">
+    <div class="title">일차함수와 일차방정식의 관계 형성평가</div>
+    <div class="modes" id="modeButtons">
+      <button class="mode-btn active" data-mode="eq-to-graph">일차방정식 ⇒ 그래프</button>
+      <button class="mode-btn" data-mode="graph-to-eq">그래프 ⇒ 일차방정식(해 2개)</button>
+      <button class="mode-btn" data-mode="system">연립방정식 그래프로 풀기</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas"></canvas>
+        <div class="overlay"><div id="toast" class="toast"></div></div>
+        <div id="eqFormula" class="eq-formula"><div class="eqf-inner" id="eqFormulaInner"></div></div>
+      </div>
+    </div>
+
+    <div class="panel" id="rightPanel"></div>
+
+    <div class="panel" id="leaderboardPanel" style="grid-column:1 / -1; margin-top:16px; margin-bottom:30px;">
+      <h3 style="margin-top:0;">나의 기록 (상위 10판)</h3>
+      <div id="leaderboardBody" style="font-size:14px; color:#374151;">아직 기록이 없습니다.</div>
+    </div>
+  </div>
+
+  <div class="watermark">Made by HosungT</div>
+
+<script>
+/* =========================
+   공통 유틸/좌표평면
+========================= */
+function lineScale(){ return (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ? 2 : 1; }
+
+const canvas = document.getElementById('gameCanvas');
+
+function drawCartesianPlane(canvas){
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const size = Math.floor(Math.min(rect.width, rect.height) * dpr);
+  canvas.width = size; canvas.height = size;
+
+  const origin = size/2;
+  const range = 10;
+  const cells = range*2;
+  const step = size/cells;
+
+  ctx.clearRect(0,0,size,size);
+
+  // grid
+  ctx.lineWidth = (1/dpr) * lineScale();
+  ctx.strokeStyle = '#e5e7eb';
+  for(let i=0;i<=cells;i++){
+    const pos = Math.round(i*step)+0.5;
+    ctx.beginPath(); ctx.moveTo(pos,0); ctx.lineTo(pos,size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,pos); ctx.lineTo(size,pos); ctx.stroke();
+  }
+
+  // axes
+  ctx.lineWidth = (1.5/dpr) * lineScale();
+  ctx.strokeStyle = 'black';
+  ctx.beginPath(); ctx.moveTo(0,origin+0.5); ctx.lineTo(size,origin+0.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(origin+0.5,size); ctx.lineTo(origin+0.5,0); ctx.stroke();
+
+  // arrowheads
+  ctx.fillStyle='black';
+  ctx.beginPath(); ctx.moveTo(size-10*dpr, origin-4*dpr); ctx.lineTo(size, origin); ctx.lineTo(size-10*dpr, origin+4*dpr); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(origin-4*dpr, 10*dpr); ctx.lineTo(origin,0); ctx.lineTo(origin+4*dpr, 10*dpr); ctx.closePath(); ctx.fill();
+
+  // labels
+  ctx.save();
+  ctx.fillStyle='black';
+  ctx.font = `${14*dpr}px Arial`;
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('x', size-14*dpr, origin+8*dpr);
+  ctx.textAlign='right'; ctx.textBaseline='bottom';
+  ctx.fillText('y', origin-8*dpr, 14*dpr);
+  ctx.textAlign='right'; ctx.textBaseline='top';
+  ctx.fillText('O', origin-6*dpr, origin+6*dpr);
+  ctx.restore();
+
+  // ticks
+  ctx.save();
+  ctx.font = `${12*dpr}px Arial`;
+  ctx.fillStyle='black';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  for(let i=-9;i<=9;i++){
+    if(i===0) continue;
+    const x = origin + i*step;
+    ctx.fillText(String(i), x, origin+4*dpr);
+  }
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let i=-9;i<=9;i++){
+    if(i===0) continue;
+    const y = origin - i*step;
+    ctx.fillText(String(i), origin-4*dpr, y);
+  }
+  ctx.restore();
+
+  return {ctx,size,origin,step,range,dpr};
+}
+
+function drawLineWithIntercept(canvas, m, b, base, style='#1d4ed8'){
+  const {ctx, origin, step, range, dpr} = base;
+  if(!isFinite(m)) return;
+
+  const pts = [];
+  const yL = m*(-range)+b; if(yL>=-range && yL<=range) pts.push({x:-range,y:yL});
+  const yR = m*( range)+b; if(yR>=-range && yR<=range) pts.push({x: range,y:yR});
+  if(m!==0){
+    const xB = (-range - b)/m; if(xB>=-range && xB<=range) pts.push({x:xB,y:-range});
+    const xT = ( range - b)/m; if(xT>=-range && xT<=range) pts.push({x:xT,y: range});
+  } else {
+    if(b>=-range && b<=range) pts.push({x:-range,y:b},{x:range,y:b});
+  }
+  if(pts.length<2) return;
+
+  let a=pts[0], c=pts[1], maxd=-1;
+  for(let i=0;i<pts.length;i++){
+    for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+      const d=dx*dx+dy*dy;
+      if(d>maxd){maxd=d; a=pts[i]; c=pts[j];}
+    }
+  }
+  const toX = (x)=> origin + x*step;
+  const toY = (y)=> origin - y*step;
+
+  ctx.save();
+  ctx.lineWidth = (2.4/dpr) * lineScale();
+  ctx.strokeStyle = style;
+  ctx.beginPath(); ctx.moveTo(toX(a.x), toY(a.y)); ctx.lineTo(toX(c.x), toY(c.y)); ctx.stroke();
+  ctx.restore();
+}
+
+function drawPoint(canvas, x, y, base, color='#111827'){
+  const {ctx, origin, step, dpr} = base;
+  const sx = origin + x*step;
+  const sy = origin - y*step;
+  ctx.save();
+  ctx.fillStyle=color;
+  ctx.strokeStyle='#ffffff';
+  ctx.lineWidth = 2/dpr;
+  ctx.beginPath(); ctx.arc(sx, sy, 6*dpr, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function toCanvasXY(evt){
+  const rect = canvas.getBoundingClientRect();
+  const x = (evt.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (evt.clientY - rect.top) * (canvas.height / rect.height);
+  return {x,y};
+}
+function snapToGrid(px,py){
+  const {origin, step, range} = state.base;
+  const gx = Math.round((px-origin)/step);
+  const gy = Math.round((origin-py)/step);
+  return {
+    x: Math.max(-range, Math.min(range, gx)),
+    y: Math.max(-range, Math.min(range, gy))
+  };
+}
+function pointScreen(p){
+  const {origin, step} = state.base;
+  return {sx: origin + p.x*step, sy: origin - p.y*step};
+}
+function hitTestPoint(px,py){
+  const r = 10 * (state.base?.dpr || 1);
+  for(let i=0;i<state.points.length;i++){
+    const {sx,sy} = pointScreen(state.points[i]);
+    const dx = px-sx, dy=py-sy;
+    if(dx*dx+dy*dy <= r*r) return i;
+  }
+  return -1;
+}
+
+function showToast(msg, kind='ok', ms=1400){
+  const el = document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast ' + (kind==='ok'?'ok':'bad');
+  el.style.display='block';
+  setTimeout(()=>{ el.style.display='none'; }, ms);
+}
+
+/* =========================
+   분수/정수 파서
+========================= */
+function parseNumber(raw){
+  if(raw==null) return null;
+  const s = String(raw).trim();
+  if(!s) return null;
+  // a/b or integer/decimal
+  const frac = /^([+\-])?\s*(\d+)(?:\s*\/\s*(\d+))?\s*$/;
+  const dec  = /^([+\-])?\s*(\d+(?:\.\d+)?)\s*$/;
+
+  let m = s.match(frac);
+  if(m){
+    const sign = (m[1]==='-') ? -1 : 1;
+    const a = parseInt(m[2],10);
+    const b = m[3] ? parseInt(m[3],10) : 1;
+    if(b===0) return null;
+    return sign*(a/b);
+  }
+  m = s.match(dec);
+  if(m){
+    const sign = (m[1]==='-') ? -1 : 1;
+    return sign*parseFloat(m[2]);
+  }
+  return null;
+}
+function fmtRational(x){
+  // KaTeX용: 정수/간단 분수(분모<=12) 근사
+  const tol=1e-9;
+  if(Math.abs(x - Math.round(x)) < tol) return String(Math.round(x));
+  const sign = x<0 ? '-' : '';
+  const a = Math.abs(x);
+
+  let best = {n:1,d:1,err:Infinity};
+  for(let d=1; d<=12; d++){
+    const n = Math.round(a*d);
+    const err = Math.abs(a - n/d);
+    if(err < best.err) best = {n,d,err};
+  }
+  if(best.d===1) return sign + String(best.n);
+  return sign + `\\frac{${best.n}}{${best.d}}`;
+}
+
+/* =========================
+   KaTeX 오버레이
+========================= */
+const eqFormulaBox = document.getElementById('eqFormula');
+const eqFormulaInner = document.getElementById('eqFormulaInner');
+let fixedFormulaScale = null;
+
+function showKatexAtAxesRect(tex, rect){
+  eqFormulaBox.style.left = rect.left + 'px';
+  eqFormulaBox.style.top  = rect.top  + 'px';
+  eqFormulaBox.style.width  = rect.width + 'px';
+  eqFormulaBox.style.height = rect.height + 'px';
+
+  eqFormulaInner.style.transform='scale(1)';
+  eqFormulaInner.style.fontSize='64px';
+  eqFormulaInner.style.left='0px';
+  eqFormulaInner.style.top='0px';
+
+  const prevDisp = eqFormulaBox.style.display;
+  const prevVis  = eqFormulaBox.style.visibility;
+  eqFormulaBox.style.display='block';
+  eqFormulaBox.style.visibility='hidden';
+
+  // 기준 텍스트로 스케일 계산(고정)
+  if(fixedFormulaScale===null){
+    const ref = 'y = 3.10x - 2.20';
+    eqFormulaInner.innerHTML='';
+    if(window.katex) window.katex.render(ref, eqFormulaInner, {throwOnError:false, displayMode:false, output:'html'});
+    else eqFormulaInner.textContent=ref;
+    const needW = Math.max(1, eqFormulaInner.offsetWidth);
+    const needH = Math.max(1, eqFormulaInner.offsetHeight);
+    fixedFormulaScale = Math.max(0.1, Math.min(rect.width/needW, rect.height/needH));
+  }
+
+  eqFormulaInner.innerHTML='';
+  if(window.katex) window.katex.render(tex, eqFormulaInner, {throwOnError:false, displayMode:false, output:'html'});
+  else eqFormulaInner.textContent=tex;
+
+  eqFormulaInner.style.transform = `scale(${fixedFormulaScale})`;
+  const scaledW = eqFormulaInner.offsetWidth * fixedFormulaScale;
+  const scaledH = eqFormulaInner.offsetHeight * fixedFormulaScale;
+  eqFormulaInner.style.left = Math.max(0,(rect.width-scaledW)/2) + 'px';
+  eqFormulaInner.style.top  = Math.max(0,(rect.height-scaledH)/2) + 'px';
+
+  eqFormulaBox.style.visibility='visible';
+  eqFormulaBox.style.display='block';
+}
+function rectFromAxes(xMin,xMax,yMin,yMax){
+  const {origin,step} = state.base || drawCartesianPlane(canvas);
+  const left = origin + xMin*step;
+  const right= origin + xMax*step;
+  const top  = origin - yMax*step;
+  const bottom=origin - yMin*step;
+  return {left, top, width:right-left, height:bottom-top};
+}
+function showEquationOnCanvas(tex){
+  // 좌상단 근처
+  const rect = rectFromAxes(-9.8, -2.0, 7.0, 9.8);
+  showKatexAtAxesRect(tex, rect);
+}
+function hideEquationOnCanvas(){
+  eqFormulaBox.style.display='none';
+}
+
+/* =========================
+   리더보드
+========================= */
+const leaderboard = { m1:[], m2:[], m3:[] };
+
+function addRecord(key, score){
+  const arr = leaderboard[key];
+  arr.push({score, at: Date.now()});
+  arr.sort((a,b)=> (b.score-a.score) || (b.at-a.at));
+  if(arr.length>10) arr.length=10;
+  renderLeaderboard();
+}
+function renderLeaderboard(){
+  const box = document.getElementById('leaderboardBody');
+  const fmt = (t)=>{ try{return new Date(t).toLocaleString();}catch{return t;} };
+  const section = (title, items)=>{
+    if(!items || items.length===0){
+      return `<div style="margin:8px 0 2px; font-weight:700;">${title}</div>
+              <div style="color:#6b7280;">기록 없음</div>`;
+    }
+    const rows = items.map((r,i)=>`
+      <tr>
+        <td style="padding:6px 8px; width:3ch; text-align:right; color:#6b7280;">${i+1}</td>
+        <td style="padding:6px 8px; font-weight:700;">${r.score}점</td>
+        <td style="padding:6px 8px; color:#6b7280;">${fmt(r.at)}</td>
+      </tr>
+    `).join('');
+    return `
+      <div style="margin:8px 0 6px; font-weight:700;">${title}</div>
+      <table style="border-collapse:collapse; width:100%; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:6px 8px; text-align:right; width:3ch; color:#6b7280;">#</th>
+            <th style="padding:6px 8px; text-align:left;">점수</th>
+            <th style="padding:6px 8px; text-align:left;">기록 시각</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  };
+  box.innerHTML = `
+    ${section('① 일차방정식 ⇒ 그래프', leaderboard.m1)}
+    ${section('② 그래프 ⇒ 해 2개', leaderboard.m2)}
+    ${section('③ 연립방정식 그래프 풀이', leaderboard.m3)}
+  `;
+}
+
+/* =========================
+   상태/타이머/렌더
+========================= */
+const setRightPanel = (html)=>{ document.getElementById('rightPanel').innerHTML = html; };
+
+const state = {
+  mode: 'm1',
+  base: null,
+
+  // 공통 게임
+  gameLen: 10,
+  perTime: 100,
+  problemIndex: 0,
+  score: 0,
+  timeLeft: 0,
+  timerId: null,
+  pending: false,
+
+  // 캔버스 상호작용
+  points: [],
+  canMove: true,
+  selectingLine: false,
+  selected: [],
+
+  // 드래그
+  draggingIndex: -1,
+  hasDragged: false,
+
+  // 모드별 데이터
+  // m1: 1차방정식->함수(정답 m,k) + 그래프 그리기
+  eq: null,        // {a,b,c, form:'eq'|'eq0'}  실제는 ax+by=c 를 기준으로 저장
+  func: null,      // {m,k}
+  stage: 1,        // m1 단계 1(변형) / 2(그리기)
+  triesStage1: 0,
+  triesStage2: 0,
+
+  // m2: 그래프->해 2개
+  m2eq: null,      // {a,b,c, form} ax+by=c 기준
+  m2pointsAns: null, // 예시용
+
+  // m3: system
+  sys: null,       // {L1:{a,b,c,form}, L2:{...}, sol:{x,y}}
+  m3_drawnLine2: null, // 학생이 그린 두 점으로 만든 (m,k)
+};
+
+function resetTimer(){
+  if(state.timerId){ clearInterval(state.timerId); state.timerId=null; }
+}
+function startTimer(){
+  resetTimer();
+  state.timerId = setInterval(()=>{
+    state.timeLeft -= 1;
+    updateHUD();
+    if(state.timeLeft <= 0){
+      state.timeLeft = 0;
+      updateHUD();
+      resetTimer();
+      handleTimeOut();
+    }
+  }, 1000);
+}
+function updateHUD(){
+  const t = document.getElementById('timeLeft'); if(t) t.textContent = Math.max(0, Math.ceil(state.timeLeft));
+  const s = document.getElementById('scoreNow'); if(s) s.textContent = state.score;
+  const r = document.getElementById('remainCount'); if(r) r.textContent = String(state.gameLen - state.problemIndex);
+}
+
+function renderBase(){
+  state.base = drawCartesianPlane(canvas);
+}
+function renderAll(){
+  renderBase();
+  const base = state.base;
+
+  // 모드별로 선/점 표시
+  if(state.mode==='m1'){
+    hideEquationOnCanvas();
+    // stage2에서 학생이 찍은 점 표시
+    for(const p of state.points) drawPoint(canvas, p.x, p.y, base, '#111827');
+    // 학생이 선택한 2점이면 미리보기 선
+    if(state.selectingLine && state.selected.length===2){
+      const p1 = state.points[state.selected[0]];
+      const p2 = state.points[state.selected[1]];
+      const m = (p2.x===p1.x) ? Infinity : (p2.y-p1.y)/(p2.x-p1.x);
+      if(isFinite(m)){
+        const k = p1.y - m*p1.x;
+        drawLineWithIntercept(canvas, m, k, base, getComputedStyle(document.documentElement).getPropertyValue('--line') || '#1d4ed8');
+      }
+    }
+  }
+  if(state.mode==='m2'){
+    // 정답 직선(그래프) 표시 + 식 표시
+    const {m,k} = lineFromABC(state.m2eq.a, state.m2eq.b, state.m2eq.c);
+    drawLineWithIntercept(canvas, m, k, base, '#1d4ed8');
+    showEquationOnCanvas(latexForEquation(state.m2eq));
+  }
+  if(state.mode==='m3'){
+    // L1은 미리 그림
+    const L1 = state.sys.L1;
+    const {m:k_m, k:k_b} = lineFromABC(L1.a,L1.b,L1.c);
+    drawLineWithIntercept(canvas, k_m, k_b, base, '#1d4ed8');
+    showEquationOnCanvas(latexForSystem(state.sys.L1, state.sys.L2));
+
+    // 학생이 찍은 점(두 점)
+    for(const p of state.points) drawPoint(canvas, p.x, p.y, base, '#111827');
+
+    // 학생이 선택한 2점이면 미리보기 선
+    if(state.selectingLine && state.selected.length===2){
+      const p1 = state.points[state.selected[0]];
+      const p2 = state.points[state.selected[1]];
+      const m = (p2.x===p1.x) ? Infinity : (p2.y-p1.y)/(p2.x-p1.x);
+      if(isFinite(m)){
+        const k = p1.y - m*p1.x;
+        drawLineWithIntercept(canvas, m, k, base, '#0ea5e9');
+      }
+    }
+
+    // 학생이 "선 확정"까지 끝냈다면(두 점 확정) 교점 표시(정답 교점)
+    if(state.m3_drawnLine2){
+      drawPoint(canvas, state.sys.sol.x, state.sys.sol.y, base, '#16a34a');
+    }
+  }
+}
+
+/* =========================
+   문제 생성 로직
+========================= */
+const COEFF_POOL = [1,2,3,4,5,6,-1,-2,-3,-4,-5,-6];
+
+function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+function makeEquationWithSolution(){
+  // b != 0(함수로 변형 가능), 해가 [-6,6] 정수격자점에 존재하도록 구성
+  let a = randChoice(COEFF_POOL);
+  let b = randChoice(COEFF_POOL.filter(v=>v!==0));
+  let x0 = randInt(-6,6);
+  let y0 = randInt(-6,6);
+  if(x0===0 && y0===0) y0=1;
+
+  // ax + by = c
+  const c = a*x0 + b*y0;
+
+  // form 랜덤: ax+by=c 또는 ax+by+c=0
+  const form = (Math.random()<0.5) ? 'eq' : 'eq0';
+  // 내부 저장은 항상 ax+by=c 기준으로 저장하되 form만 다르게
+  return {a,b,c,form, sample:{x:x0,y:y0}};
+}
+
+function lineFromABC(a,b,c){
+  // ax+by=c -> y = (-a/b)x + (c/b)
+  const m = -a/b;
+  const k = c/b;
+  return {m,k};
+}
+
+function latexForEquation(eq){
+  // eq.form에 맞게 출력
+  const {a,b,c,form} = eq;
+  const term = (coef, sym, first=false)=>{
+    if(coef===0) return '';
+    const abs = Math.abs(coef);
+    const sign = (coef<0) ? '-' : (first?'':'+');
+    const coefStr = (abs===1) ? '' : String(abs);
+    return `${sign}${coefStr}${sym}`;
+  };
+  if(form==='eq'){
+    // ax+by=c
+    let left = '';
+    left += term(a,'x',true);
+    left += term(b,'y', left==='' );
+    if(left==='') left='0';
+    return `${left}=${c}`;
+  }else{
+    // ax+by+c=0  (여기서 c는 "상수항"으로 표기되게: ax+by + (const) = 0
+    // 현재 내부 c는 등식형(ax+by=c)의 RHS이므로, ax+by -c = 0 형태가 됨
+    const constTerm = -c;
+    let left = '';
+    left += term(a,'x',true);
+    left += term(b,'y', left==='' );
+    // 상수항
+    if(constTerm!==0){
+      const abs = Math.abs(constTerm);
+      const sign = (constTerm<0) ? '-' : (left===''?'':'+' );
+      left += `${sign}${abs}`;
+    }
+    if(left==='') left='0';
+    return `${left}=0`;
+  }
+}
+
+function latexForSystem(L1, L2){
+  // \left\{\begin{array}{l} ... \\ ... \end{array}\right.
+  const e1 = latexForEquation(L1);
+  const e2 = latexForEquation(L2);
+  return `\\left\\{\\begin{array}{l}${e1}\\\\${e2}\\end{array}\\right.`;
+}
+
+function makeSystemWithIntegerIntersection(){
+  // 해 (x,y) 정수, |x|,|y|<=7
+  const x = randInt(-7,7);
+  const y = randInt(-7,7);
+  const sol = {x,y};
+
+  // 두 직선: b!=0, 서로 평행X
+  let a1,b1,a2,b2;
+  while(true){
+    a1 = randChoice(COEFF_POOL);
+    b1 = randChoice(COEFF_POOL.filter(v=>v!==0));
+    a2 = randChoice(COEFF_POOL);
+    b2 = randChoice(COEFF_POOL.filter(v=>v!==0));
+    // 평행(비례) 방지
+    if(a1*b2 === a2*b1) continue;
+    break;
+  }
+  const c1 = a1*x + b1*y;
+  const c2 = a2*x + b2*y;
+
+  const L1 = {a:a1,b:b1,c:c1,form:(Math.random()<0.5?'eq':'eq0')};
+  const L2 = {a:a2,b:b2,c:c2,form:(Math.random()<0.5?'eq':'eq0')};
+
+  return {L1,L2,sol};
+}
+
+/* =========================
+   모드 1: 일차방정식 => 그래프 (2단계 공유 타이머)
+========================= */
+function startMode1(){
+  resetTimer();
+  state.mode='m1';
+  state.problemIndex=0;
+  state.score=0;
+  state.pending=false;
+
+  setRightPanel(`
+    <h3>일차방정식 ⇒ 그래프</h3>
+    <div style="margin:12px 0 10px; font-size:16px;"><b>준비 됐나요?</b></div>
+    <div class="controls"><button id="m1ReadyBtn" class="btn">네</button></div>
+    <div class="hint">
+      10문제, 문제당 제한시간 100초(두 단계가 시간을 공유).<br/>
+      ① <b>y=mx+k</b>로 변형 → ② 두 점으로 그래프 그리기.
+    </div>
+  `);
+
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  state.canMove=true;
+  hideEquationOnCanvas();
+  renderAll();
+}
+
+function nextProblemM1(){
+  if(state.problemIndex >= state.gameLen){
+    finishMode('m1');
+    return;
+  }
+  state.eq = makeEquationWithSolution();
+
+  // 정답 함수식
+  state.func = lineFromABC(state.eq.a, state.eq.b, state.eq.c);
+
+  state.stage = 1;
+  state.triesStage1 = 0;
+  state.triesStage2 = 0;
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  state.canMove=true;
+
+  state.timeLeft = state.perTime;
+  updateHUD();
+
+  setRightPanel(m1Stage1Panel());
+  renderAll();
+  startTimer();
+
+  // 입력 포커스
+  setTimeout(()=>{
+    const mIn = document.getElementById('m1_m');
+    if(mIn){ mIn.focus(); mIn.select(); }
+  },0);
+}
+
+function m1Stage1Panel(){
+  const eqTex = latexForEquation(state.eq);
+  return `
+    <h3>일차방정식 ⇒ 그래프</h3>
+    <div class="statbar">
+      <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+      <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+      <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
+    </div>
+
+    <div style="margin:8px 0 6px; font-size:16px;">
+      <b>문제:</b> <span id="m1EqMath"></span>
+    </div>
+
+    <div class="hint">
+      ① 위의 일차방정식을 <b>y = mx + k</b> 형태로 고치세요.<br/>
+      - 입력은 <b>m</b>(x의 계수), <b>k</b>(상수항)만 하면 됩니다.<br/>
+      - 분수는 <b>1/3</b>, <b>-5/2</b>처럼 입력 가능.<br/>
+      - 오답이면 <b>-5초</b>, 기회는 <b>3번</b>.
+    </div>
+
+    <div class="expr-row" style="margin-top:10px;">
+      <span style="font-weight:700;">y</span>
+      <span style="font-weight:700;">=</span>
+      <input id="m1_m" class="expr-k" type="text" placeholder="m" inputmode="text" />
+      <span style="font-weight:700;">x</span>
+      <span style="font-weight:700;">+</span>
+      <input id="m1_k" class="expr-k expr-const" type="text" placeholder="k" inputmode="text" />
+    </div>
+
+    <div class="controls">
+      <button id="m1CheckStage1" class="btn">확인</button>
+    </div>
+
+    <div id="m1Explain" style="display:none; margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb; color:#111827;"></div>
+  `;
+}
+
+function renderM1Equation(){
+  const el = document.getElementById('m1EqMath');
+  if(!el) return;
+  el.innerHTML='';
+  const tex = latexForEquation(state.eq);
+  if(window.katex) window.katex.render(tex, el, {throwOnError:false, displayMode:false, output:'html'});
+  else el.textContent = tex;
+}
+
+function m1ExplainSteps(){
+  // ax+by=c -> by = -ax + c -> y = (-a/b)x + (c/b)
+  const {a,b,c} = state.eq;
+  const m = state.func.m;
+  const k = state.func.k;
+
+  const aStr = `${a}x`;
+  const bStr = `${b}y`;
+  const texEq = latexForEquation(state.eq);
+
+  const step1 = `\\text{주어진 식: }${texEq}`;
+  const step2 = `\\Rightarrow ${b}y = ${(-a)}x + ${c}`;
+  const step3 = `\\Rightarrow y = \\frac{${(-a)}}{${b}}x + \\frac{${c}}{${b}}`;
+  const step4 = `\\Rightarrow y = ${fmtRational(m)}x + ${fmtRational(k)}`;
+
+  return `
+    <div style="font-weight:800; margin-bottom:6px;">정답 및 풀이(요약)</div>
+    <div id="m1ExplainMath"></div>
+    <div class="hint" style="margin-top:8px;">
+      ※ 분수는 약분되어 보일 수 있어요. (예: 2/4 = 1/2)
+    </div>
+  `;
+}
+function mountM1ExplainMath(){
+  const box = document.getElementById('m1Explain');
+  const math = document.getElementById('m1ExplainMath');
+  if(!box || !math) return;
+  const {a,b,c} = state.eq;
+  const texEq = latexForEquation(state.eq);
+  const step1 = `\\text{주어진 식: }${texEq}`;
+  const step2 = `\\Rightarrow ${b}y = ${(-a)}x + ${c}`;
+  const step3 = `\\Rightarrow y = \\frac{${(-a)}}{${b}}x + \\frac{${c}}{${b}}`;
+  const step4 = `\\Rightarrow y = ${fmtRational(state.func.m)}x + ${fmtRational(state.func.k)}`;
+
+  const tex = `\\begin{aligned}
+  ${step1}\\\\
+  ${step2}\\\\
+  ${step3}\\\\
+  ${step4}
+  \\end{aligned}`;
+
+  math.innerHTML='';
+  if(window.katex) window.katex.render(tex, math, {throwOnError:false, displayMode:true, output:'html'});
+  else math.textContent = tex;
+}
+
+function goM1Stage2(){
+  state.stage = 2;
+  state.triesStage2 = 0;
+
+  // 점 2개로 선
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  state.canMove=true;
+
+  setRightPanel(`
+    <h3>일차방정식 ⇒ 그래프</h3>
+    <div class="statbar">
+      <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+      <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+      <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
+    </div>
+
+    <div style="margin:8px 0 6px; font-size:16px;">
+      <b>2단계:</b> 방금 구한 <b>y = ${fmtRational(state.func.m)}x + ${fmtRational(state.func.k)}</b> 의 그래프를 그리세요.
+    </div>
+    <div class="hint">
+      - 격자점(정수 좌표)을 <b>2개</b> 찍고, <b>선 그리기</b>로 직선을 만든 뒤 확인하세요.<br/>
+      - 오답이면 <b>-5초</b>, 기회는 <b>3번</b>.<br/>
+      - 정답이면 <b>남은 시간만큼 점수</b>를 얻습니다.
+    </div>
+
+    <div class="controls">
+      <button id="m1DrawLine" class="btn" disabled>선 그리기</button>
+    </div>
+
+    <div id="m1Confirm" class="confirm">
+      <p>이대로 그래프 그리기를 마칠까요?</p>
+      <div class="controls">
+        <button id="m1Yes" class="btn">네</button>
+        <button id="m1No" class="btn ghost">아니요</button>
+      </div>
+    </div>
+  `);
+
+  renderAll();
+  updateHUD();
+}
+
+/* =========================
+   모드 2: 그래프 => 일차방정식(해 2개)
+========================= */
+function startMode2(){
+  resetTimer();
+  state.mode='m2';
+  state.problemIndex=0;
+  state.score=0;
+  state.pending=false;
+
+  setRightPanel(`
+    <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+    <div style="margin:12px 0 10px; font-size:16px;"><b>준비 됐나요?</b></div>
+    <div class="controls"><button id="m2ReadyBtn" class="btn">네</button></div>
+    <div class="hint">
+      10문제, 문제당 제한시간 100초.<br/>
+      그래프(직선)와 식이 제시되면, 그 식의 해(좌표)를 <b>2개</b> 쓰세요.
+    </div>
+  `);
+
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  state.canMove=false;
+  renderAll();
+}
+
+function nextProblemM2(){
+  if(state.problemIndex >= state.gameLen){
+    finishMode('m2');
+    return;
+  }
+  state.m2eq = makeEquationWithSolution();
+  state.timeLeft = state.perTime;
+  updateHUD();
+  startTimer();
+
+  // 예시 정답 2개(근처 정수해) 만들어두기
+  state.m2pointsAns = pickTwoIntegerSolutionsNearOrigin(state.m2eq);
+
+  setRightPanel(`
+    <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+    <div class="statbar">
+      <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+      <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+      <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
+    </div>
+
+    <div class="hint">
+      좌표평면에 그려진 직선은 <b>왼쪽 위에 표시된 식</b>의 그래프입니다.<br/>
+      그 식의 해를 <b>서로 다른 두 개</b> 써 보세요. (정수로 입력)
+    </div>
+
+    <div style="margin-top:10px; display:grid; gap:8px;">
+      <div class="expr-row">
+        <span style="font-weight:800;">(1)</span>
+        <span style="font-weight:700;">x =</span>
+        <input id="m2x1" class="expr-k" type="text" placeholder="정수" inputmode="numeric" />
+        <span style="font-weight:700;">y =</span>
+        <input id="m2y1" class="expr-k" type="text" placeholder="정수" inputmode="numeric" />
+      </div>
+
+      <div class="expr-row">
+        <span style="font-weight:800;">(2)</span>
+        <span style="font-weight:700;">x =</span>
+        <input id="m2x2" class="expr-k" type="text" placeholder="정수" inputmode="numeric" />
+        <span style="font-weight:700;">y =</span>
+        <input id="m2y2" class="expr-k" type="text" placeholder="정수" inputmode="numeric" />
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="m2Check" class="btn">확인</button>
+    </div>
+
+    <div id="m2TryHint" class="hint" style="margin-top:8px;">오답이면 -5초, 기회는 3번입니다.</div>
+  `);
+
+  renderAll();
+
+  setTimeout(()=>{
+    const x1 = document.getElementById('m2x1');
+    if(x1){ x1.focus(); x1.select(); }
+  },0);
+
+  state.triesStage1 = 0; // 재사용: m2 시도횟수
+}
+
+function isIntegerString(s){
+  if(s==null) return false;
+  const t = String(s).trim();
+  return /^[-+]?\d+$/.test(t);
+}
+function satisfiesABC(eq, x, y){
+  // ax + by = c 기준
+  return eq.a*x + eq.b*y === eq.c;
+}
+function pickTwoIntegerSolutionsNearOrigin(eq){
+  // [-8,8]에서 정수해 2개 찾기(가급적 원점 근처)
+  const sols = [];
+  for(let X=-8; X<=8; X++){
+    for(let Y=-8; Y<=8; Y++){
+      if(satisfiesABC(eq,X,Y)) sols.push({x:X,y:Y, dist: X*X+Y*Y});
+    }
+  }
+  sols.sort((p,q)=>p.dist-q.dist);
+  if(sols.length>=2) return [sols[0], sols[1]];
+  if(sols.length===1) return [sols[0], sols[0]];
+  // 거의 없을 일(생성에서 보장하려고 sample 있음)
+  return [{x:eq.sample.x,y:eq.sample.y},{x:eq.sample.x+1,y:eq.sample.y}];
+}
+
+/* =========================
+   모드 3: 연립방정식 그래프로 풀기
+========================= */
+function startMode3(){
+  resetTimer();
+  state.mode='m3';
+  state.problemIndex=0;
+  state.score=0;
+  state.pending=false;
+
+  setRightPanel(`
+    <h3>연립방정식 그래프로 풀기</h3>
+    <div style="margin:12px 0 10px; font-size:16px;"><b>준비 됐나요?</b></div>
+    <div class="controls"><button id="m3ReadyBtn" class="btn">네</button></div>
+    <div class="hint">
+      10문제, 문제당 제한시간 100초.<br/>
+      연립방정식이 주어지고, 그중 <b>한 직선은 미리 그려져 있습니다</b>.<br/>
+      나머지 한 직선을 <b>두 점</b>으로 그리고, 교점(x,y)을 입력하세요.
+    </div>
+  `);
+
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  state.canMove=true;
+  state.m3_drawnLine2=null;
+  renderAll();
+}
+
+function nextProblemM3(){
+  if(state.problemIndex >= state.gameLen){
+    finishMode('m3');
+    return;
+  }
+
+  state.sys = makeSystemWithIntegerIntersection();
+  state.timeLeft = state.perTime;
+  updateHUD();
+  startTimer();
+
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  state.canMove=true;
+  state.m3_drawnLine2=null;
+  state.triesStage1 = 0;
+
+  setRightPanel(`
+    <h3>연립방정식 그래프로 풀기</h3>
+    <div class="statbar">
+      <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+      <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+      <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
+    </div>
+
+    <div class="hint">
+      좌표평면에 파란 직선은 <b>첫 번째 식</b>의 그래프입니다.<br/>
+      <b>두 번째 식</b>의 그래프를 격자점 2개로 그리고, 교점의 좌표를 입력하세요.<br/>
+      (오답이면 -5초, 기회 3번)
+    </div>
+
+    <div class="controls">
+      <button id="m3DrawLine" class="btn" disabled>선 그리기</button>
+    </div>
+
+    <div id="m3Confirm" class="confirm">
+      <p>이대로 두 번째 직선을 확정할까요?</p>
+      <div class="controls">
+        <button id="m3YesLine" class="btn">확정</button>
+        <button id="m3NoLine" class="btn ghost">다시</button>
+      </div>
+    </div>
+
+    <div id="m3AnswerArea" style="display:none; margin-top:10px;">
+      <div class="expr-row">
+        <span style="font-weight:700;">x =</span>
+        <input id="m3x" class="expr-k" type="text" placeholder="정수" inputmode="numeric" />
+        <span style="font-weight:700;">y =</span>
+        <input id="m3y" class="expr-k" type="text" placeholder="정수" inputmode="numeric" />
+      </div>
+      <div class="controls">
+        <button id="m3Check" class="btn">정답 확인</button>
+      </div>
+      <div class="hint" id="m3FeedbackHint">그래프를 그린 뒤, 교점을 입력하세요.</div>
+    </div>
+  `);
+
+  renderAll();
+}
+
+/* =========================
+   채점/시간종료/종료 처리
+========================= */
+function finishMode(which){
+  resetTimer();
+  hideEquationOnCanvas();
+  const key = (which==='m1') ? 'm1' : (which==='m2' ? 'm2' : 'm3');
+  addRecord(key, state.score);
+
+  const title = (which==='m1') ? '일차방정식 ⇒ 그래프' : (which==='m2' ? '그래프 ⇒ 해 2개' : '연립방정식 그래프로 풀기');
+  setRightPanel(`
+    <h3>결과</h3>
+    <p style="font-size:16px;">모드: <b>${title}</b></p>
+    <p style="font-size:16px;">최종 점수: <b>${state.score}</b>점</p>
+    <div class="controls">
+      <button id="restartBtn" class="btn">다시 하기</button>
+    </div>
+  `);
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    if(which==='m1') startMode1();
+    if(which==='m2') startMode2();
+    if(which==='m3') startMode3();
+  });
+  // 캔버스 초기화
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  renderAll();
+}
+
+function handleTimeOut(){
+  if(state.pending) return;
+  state.pending = true;
+
+  if(state.mode==='m1'){
+    // stage별로 정답 제시 후 다음
+    if(state.stage===1){
+      showToast('시간 종료! 정답(변형)을 보여줍니다.', 'bad', 1500);
+      // 정답/풀이를 패널에 띄우고 5초 후 stage2로
+      const box = document.getElementById('m1Explain');
+      if(box){
+        box.style.display='block';
+        box.innerHTML = m1ExplainSteps();
+        mountM1ExplainMath();
+      }
+      setTimeout(()=>{
+        state.pending=false;
+        goM1Stage2(); // 남은 시간 0 그대로
+      }, 5000);
+      return;
+    } else {
+      showToast('시간 종료! 정답 그래프를 5초간 보여줍니다.', 'bad', 2000);
+      // 정답 그래프 표시
+      renderBase();
+      drawLineWithIntercept(canvas, state.func.m, state.func.k, state.base, '#16a34a');
+      setTimeout(()=>{
+        state.problemIndex++;
+        state.pending=false;
+        nextProblemM1();
+      }, 5000);
+      return;
+    }
+  }
+
+  if(state.mode==='m2'){
+    showToast('시간 종료! 예시 해를 5초간 보여줍니다.', 'bad', 2000);
+    // 예시 해 표시(패널에)
+    const ans = state.m2pointsAns;
+    setRightPanel(`
+      <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+      <div class="statbar">
+        <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+        <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+        <div class="chip">남은 시간: <b id="timeLeft">0</b>s</div>
+      </div>
+      <div style="margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;">
+        <div style="font-weight:800; margin-bottom:6px;">예시 정답(해 2개)</div>
+        <div>(x, y) = <b>(${ans[0].x}, ${ans[0].y})</b>, <b>(${ans[1].x}, ${ans[1].y})</b></div>
+      </div>
+      <div class="hint" style="margin-top:8px;">5초 후 다음 문제로 넘어갑니다.</div>
+    `);
+    renderAll();
+    setTimeout(()=>{
+      state.problemIndex++;
+      state.pending=false;
+      nextProblemM2();
+    }, 5000);
+    return;
+  }
+
+  if(state.mode==='m3'){
+    showToast('시간 종료! 정답(교점)을 5초간 보여줍니다.', 'bad', 2000);
+    // 정답 표시
+    const sol = state.sys.sol;
+    setRightPanel(`
+      <h3>연립방정식 그래프로 풀기</h3>
+      <div class="statbar">
+        <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+        <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+        <div class="chip">남은 시간: <b id="timeLeft">0</b>s</div>
+      </div>
+      <div style="margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;">
+        <div style="font-weight:800; margin-bottom:6px;">정답(교점)</div>
+        <div>x = <b>${sol.x}</b>, y = <b>${sol.y}</b></div>
+      </div>
+      <div class="hint" style="margin-top:8px;">5초 후 다음 문제로 넘어갑니다.</div>
+    `);
+    state.m3_drawnLine2 = {m:0,k:0}; // 교점 표시 켜기
+    renderAll();
+    setTimeout(()=>{
+      state.problemIndex++;
+      state.pending=false;
+      nextProblemM3();
+    }, 5000);
+    return;
+  }
+}
+
+/* =========================
+   모드 버튼 전환
+========================= */
+const modes = document.getElementById('modeButtons');
+modes.addEventListener('click', (e)=>{
+  const btn = e.target.closest('.mode-btn');
+  if(!btn) return;
+  [...modes.querySelectorAll('.mode-btn')].forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const m = btn.dataset.mode;
+  if(m==='eq-to-graph') startMode1();
+  if(m==='graph-to-eq') startMode2();
+  if(m==='system') startMode3();
+});
+
+/* =========================
+   캔버스 상호작용(점 찍기/드래그/선 선택)
+========================= */
+canvas.addEventListener('pointerdown', (e)=>{
+  if(state.mode==='m2') return; // 모드2는 그리기 없음
+  if(state.mode==='m1' && state.stage===1) return; // m1 1단계는 그리기 없음
+
+  try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+  const {x,y} = toCanvasXY(e);
+  const hit = hitTestPoint(x,y);
+
+  // 드래그/삭제(탭)
+  if(hit>=0){
+    if(!state.canMove) return;
+    state.draggingIndex = hit;
+    state.hasDragged = false;
+    return;
+  }
+
+  // 새 점 추가
+  if(state.canMove){
+    const g = snapToGrid(x,y);
+    // 정수격자점
+    if(Number.isInteger(g.x) && Number.isInteger(g.y)){
+      const limit = 2; // 이번 컨텐츠는 2개만
+      if(state.points.length < limit){
+        state.points.push({x:g.x, y:g.y});
+        renderAll();
+        if(state.points.length===2){
+          const b1 = document.getElementById('m1DrawLine');
+          const b3 = document.getElementById('m3DrawLine');
+          if(b1) b1.disabled=false;
+          if(b3) b3.disabled=false;
+          showToast('점 2개 배치 완료! 이제 "선 그리기"를 누르세요.', 'ok', 1600);
+        }
+      }
+    }
+  }
+});
+
+canvas.addEventListener('pointermove', (e)=>{
+  if(state.draggingIndex<0) return;
+  if(!state.canMove) return;
+  const {x,y} = toCanvasXY(e);
+  const g = snapToGrid(x,y);
+  const p = state.points[state.draggingIndex];
+  if(p.x!==g.x || p.y!==g.y) state.hasDragged=true;
+  p.x=g.x; p.y=g.y;
+  renderAll();
+});
+
+window.addEventListener('pointerup', (e)=>{
+  try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+
+  if(state.draggingIndex>=0){
+    // 탭으로 삭제(드래그 안 했을 때)
+    const canDelete = (state.canMove && !state.selectingLine && state.hasDragged===false);
+    if(canDelete){
+      state.points.splice(state.draggingIndex,1);
+      const b1 = document.getElementById('m1DrawLine');
+      const b3 = document.getElementById('m3DrawLine');
+      if(b1) b1.disabled = (state.points.length<2);
+      if(b3) b3.disabled = (state.points.length<2);
+      renderAll();
+    }
+  }
+  state.draggingIndex=-1;
+  state.hasDragged=false;
+});
+
+// 선 선택(두 점 클릭)
+canvas.addEventListener('pointerup', (e)=>{
+  if(!state.selectingLine) return;
+  const {x,y} = toCanvasXY(e);
+  const idx = hitTestPoint(x,y);
+  if(idx>=0){
+    if(!state.selected.includes(idx)) state.selected.push(idx);
+    if(state.selected.length>2) state.selected.shift();
+    renderAll();
+  }
+});
+
+/* =========================
+   전역 클릭 핸들러(버튼)
+========================= */
+document.addEventListener('click', (e)=>{
+  const id = e.target && e.target.id;
+
+  // 모드1 시작
+  if(id==='m1ReadyBtn'){
+    state.mode='m1';
+    nextProblemM1();
+    renderM1Equation();
+    return;
+  }
+
+  // 모드1 1단계 확인
+  if(id==='m1CheckStage1'){
+    if(state.pending) return;
+    const mRaw = document.getElementById('m1_m')?.value;
+    const kRaw = document.getElementById('m1_k')?.value;
+    const mVal = parseNumber(mRaw);
+    const kVal = parseNumber(kRaw);
+    if(mVal===null || kVal===null){
+      showToast('m, k를 숫자(또는 분수)로 입력해 주세요.', 'bad', 2200);
+      return;
+    }
+
+    const eps = 1e-9;
+    const ok = (Math.abs(mVal - state.func.m) < eps) && (Math.abs(kVal - state.func.k) < eps);
+
+    if(ok){
+      showToast('정답! 2단계로 넘어갑니다.', 'ok', 1200);
+      const box = document.getElementById('m1Explain');
+      if(box){ box.style.display='none'; }
+      // 타이머 유지(공유)
+      goM1Stage2();
+      return;
+    }
+
+    // 오답
+    state.triesStage1++;
+    state.timeLeft -= 5;
+    if(state.timeLeft<=0){
+      state.timeLeft=0; updateHUD(); resetTimer(); handleTimeOut(); return;
+    }
+    updateHUD();
+
+    if(state.triesStage1>=3){
+      // 정답+풀이 보여주고 stage2로 진행
+      showToast('3번 모두 오답! 정답과 풀이를 보여줍니다.', 'bad', 2200);
+      const box = document.getElementById('m1Explain');
+      if(box){
+        box.style.display='block';
+        box.innerHTML = m1ExplainSteps();
+        mountM1ExplainMath();
+      }
+      // 바로 2단계로
+      setTimeout(()=>{ goM1Stage2(); }, 1000);
+    } else {
+      showToast(`오답! 남은 시간 -5초. (남은 기회 ${3-state.triesStage1}번)`, 'bad', 2600);
+    }
+    return;
+  }
+
+  // 모드1: 선 그리기
+  if(id==='m1DrawLine'){
+    if(state.points.length<2) return;
+    state.selectingLine=true;
+    state.canMove=false;
+    state.selected=[];
+    const c = document.getElementById('m1Confirm');
+    if(c) c.style.display='block';
+    showToast('두 점을 차례로 클릭해 직선을 지정하세요.', 'ok', 1400);
+    return;
+  }
+  if(id==='m1No'){
+    state.selectingLine=false;
+    state.canMove=true;
+    state.selected=[];
+    const c = document.getElementById('m1Confirm');
+    if(c) c.style.display='none';
+    renderAll();
+    return;
+  }
+  if(id==='m1Yes'){
+    if(state.pending) return;
+    if(state.selected.length!==2){
+      showToast('두 점을 선택해 주세요.', 'bad', 1600);
+      return;
+    }
+    const p1 = state.points[state.selected[0]];
+    const p2 = state.points[state.selected[1]];
+    if(p2.x===p1.x){
+      // 이번 컨텐츠는 b!=0이라 수직선 정답이 없음
+      m1GraphWrong('수직선이 되었어요. 다시 그려 보세요.');
+      return;
+    }
+    const m = (p2.y-p1.y)/(p2.x-p1.x);
+    const k = p1.y - m*p1.x;
+
+    const eps=1e-9;
+    const ok = (Math.abs(m - state.func.m) < eps) && (Math.abs(k - state.func.k) < eps);
+
+    if(ok){
+      const add = Math.max(0, Math.ceil(state.timeLeft));
+      state.score += add;
+      updateHUD();
+      showToast(`정답! +${add}점`, 'ok', 1200);
+      state.problemIndex++;
+      nextProblemM1();
+      renderM1Equation();
+    } else {
+      m1GraphWrong('그래프를 잘못 그렸어요. 다시 그려 보세요.');
+    }
+    return;
+  }
+
+  // 모드2 시작
+  if(id==='m2ReadyBtn'){
+    nextProblemM2();
+    return;
+  }
+  // 모드2 확인
+  if(id==='m2Check'){
+    if(state.pending) return;
+    const x1 = document.getElementById('m2x1')?.value;
+    const y1 = document.getElementById('m2y1')?.value;
+    const x2 = document.getElementById('m2x2')?.value;
+    const y2 = document.getElementById('m2y2')?.value;
+
+    const bad = [];
+    if(!isIntegerString(x1) || !isIntegerString(y1)) bad.push('①');
+    if(!isIntegerString(x2) || !isIntegerString(y2)) bad.push('②');
+
+    if(bad.length){
+      showToast(`${bad.join(', ')}의 x,y를 정수로 입력해 주세요.`, 'bad', 2400);
+      return;
+    }
+
+    const P1 = {x:parseInt(x1,10), y:parseInt(y1,10)};
+    const P2 = {x:parseInt(x2,10), y:parseInt(y2,10)};
+
+    const ok1 = satisfiesABC(state.m2eq, P1.x, P1.y);
+    const ok2 = satisfiesABC(state.m2eq, P2.x, P2.y);
+    const distinct = !(P1.x===P2.x && P1.y===P2.y);
+
+    if(ok1 && ok2 && distinct){
+      const add = Math.max(0, Math.ceil(state.timeLeft));
+      state.score += add;
+      updateHUD();
+      showToast(`정답! +${add}점`, 'ok', 1200);
+      state.problemIndex++;
+      nextProblemM2();
+      return;
+    }
+
+    state.triesStage1++;
+    state.timeLeft -= 5;
+    if(state.timeLeft<=0){
+      state.timeLeft=0; updateHUD(); resetTimer(); handleTimeOut(); return;
+    }
+    updateHUD();
+
+    // 틀린 답만 피드백(요청)
+    let msgParts = [];
+    if(!ok1) msgParts.push('①');
+    if(!ok2) msgParts.push('②');
+    if(ok1 && ok2 && !distinct) msgParts.push('두 해가 같아요(서로 다른 해 2개 필요)');
+
+    if(state.triesStage1>=3){
+      const ans = state.m2pointsAns;
+      showToast('3번 모두 오답! 예시 정답을 보여줍니다.', 'bad', 2200);
+      setRightPanel(`
+        <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+        <div class="statbar">
+          <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+          <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+          <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
+        </div>
+        <div style="margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;">
+          <div style="font-weight:800; margin-bottom:6px;">예시 정답(원점 근처 정수해)</div>
+          <div>(x, y) = <b>(${ans[0].x}, ${ans[0].y})</b>, <b>(${ans[1].x}, ${ans[1].y})</b></div>
+        </div>
+        <div class="hint" style="margin-top:8px;">1초 후 다음 문제로 넘어갑니다.</div>
+      `);
+      renderAll();
+      setTimeout(()=>{
+        state.problemIndex++;
+        nextProblemM2();
+      }, 1000);
+    } else {
+      const msg = msgParts.length ? `${msgParts.join(', ')}가 오답이에요. 남은 시간 -5초.` : `오답! 남은 시간 -5초.`;
+      showToast(msg, 'bad', 2600);
+    }
+    return;
+  }
+
+  // 모드3 시작
+  if(id==='m3ReadyBtn'){
+    nextProblemM3();
+    return;
+  }
+
+  // 모드3: 선 그리기
+  if(id==='m3DrawLine'){
+    if(state.points.length<2) return;
+    state.selectingLine=true;
+    state.canMove=false;
+    state.selected=[];
+    const c = document.getElementById('m3Confirm');
+    if(c) c.style.display='block';
+    showToast('두 점을 차례로 클릭해 직선을 지정하세요.', 'ok', 1400);
+    return;
+  }
+  if(id==='m3NoLine'){
+    state.selectingLine=false;
+    state.canMove=true;
+    state.selected=[];
+    const c = document.getElementById('m3Confirm');
+    if(c) c.style.display='none';
+    renderAll();
+    return;
+  }
+  if(id==='m3YesLine'){
+    if(state.selected.length!==2){
+      showToast('두 점을 선택해 주세요.', 'bad', 1600);
+      return;
+    }
+    const p1 = state.points[state.selected[0]];
+    const p2 = state.points[state.selected[1]];
+    if(p2.x===p1.x){
+      showToast('수직선이 되었어요. 다시 선택해 주세요.', 'bad', 2000);
+      return;
+    }
+    const m = (p2.y-p1.y)/(p2.x-p1.x);
+    const k = p1.y - m*p1.x;
+    state.m3_drawnLine2 = {m,k};
+
+    // 그리기 확정: 교점 표시 + 답안 입력 영역 활성화
+    state.selectingLine=false;
+    state.canMove=false;
+    const c = document.getElementById('m3Confirm');
+    if(c) c.style.display='none';
+
+    const ansArea = document.getElementById('m3AnswerArea');
+    if(ansArea) ansArea.style.display='block';
+
+    showToast('좋아요! 이제 교점(x,y)을 입력하세요.', 'ok', 1600);
+    renderAll();
+
+    setTimeout(()=>{
+      const xIn = document.getElementById('m3x');
+      if(xIn){ xIn.focus(); xIn.select(); }
+    },0);
+    return;
+  }
+
+  // 모드3: 정답 확인
+  if(id==='m3Check'){
+    if(state.pending) return;
+    const xRaw = document.getElementById('m3x')?.value;
+    const yRaw = document.getElementById('m3y')?.value;
+    if(!isIntegerString(xRaw) || !isIntegerString(yRaw)){
+      showToast('x, y를 정수로 입력해 주세요.', 'bad', 2200);
+      return;
+    }
+    const x = parseInt(xRaw,10), y=parseInt(yRaw,10);
+    const sol = state.sys.sol;
+
+    const correct = (x===sol.x && y===sol.y);
+
+    if(correct){
+      const add = Math.max(0, Math.ceil(state.timeLeft));
+      state.score += add;
+      updateHUD();
+      showToast(`정답! +${add}점`, 'ok', 1200);
+      state.problemIndex++;
+      nextProblemM3();
+      return;
+    }
+
+    // 오답: -5초, 기회 3번
+    state.triesStage1++;
+    state.timeLeft -= 5;
+    if(state.timeLeft<=0){
+      state.timeLeft=0; updateHUD(); resetTimer(); handleTimeOut(); return;
+    }
+    updateHUD();
+
+    // 피드백 3종 판정:
+    // 1) 그래프(학생이 그린 L2)가 틀렸는지?
+    const L2 = state.sys.L2;
+    const L2mk = lineFromABC(L2.a,L2.b,L2.c);
+    const lineOK = (state.m3_drawnLine2 && Math.abs(state.m3_drawnLine2.m - L2mk.m) < 1e-9 && Math.abs(state.m3_drawnLine2.k - L2mk.k) < 1e-9);
+
+    let msg = '다시 해보세요.';
+    if(!lineOK){
+      msg = '그래프를 잘못 그린 것 같아요. 두 번째 직선을 다시 그려보세요.';
+      // 다시 그리기 허용(점 리셋)
+      state.points=[];
+      state.selected=[];
+      state.canMove=true;
+      state.m3_drawnLine2=null;
+      const ansArea = document.getElementById('m3AnswerArea');
+      if(ansArea) ansArea.style.display='none';
+      const btn = document.getElementById('m3DrawLine');
+      if(btn) btn.disabled=true;
+    } else {
+      msg = '그래프는 맞는 것 같아요. 교점의 좌표를 다시 확인해 보세요.';
+    }
+
+    showToast(`오답! 남은 시간 -5초. ${msg}`, 'bad', 3200);
+
+    if(state.triesStage1>=3){
+      showToast('3번 모두 오답! 정답을 보여줍니다.', 'bad', 2200);
+      const sol = state.sys.sol;
+      setRightPanel(`
+        <h3>연립방정식 그래프로 풀기</h3>
+        <div class="statbar">
+          <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+          <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+          <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
+        </div>
+        <div style="margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;">
+          <div style="font-weight:800; margin-bottom:6px;">정답(교점)</div>
+          <div>x = <b>${sol.x}</b>, y = <b>${sol.y}</b></div>
+        </div>
+        <div class="hint" style="margin-top:8px;">1초 후 다음 문제로 넘어갑니다.</div>
+      `);
+      state.m3_drawnLine2 = {m:0,k:0}; // 교점 표시
+      renderAll();
+      setTimeout(()=>{
+        state.problemIndex++;
+        nextProblemM3();
+      }, 1000);
+    } else {
+      renderAll();
+    }
+    return;
+  }
+});
+
+function m1GraphWrong(extraMsg){
+  state.triesStage2++;
+  state.timeLeft -= 5;
+  if(state.timeLeft<=0){
+    state.timeLeft=0; updateHUD(); resetTimer(); handleTimeOut(); return;
+  }
+  updateHUD();
+
+  if(state.triesStage2>=3){
+    showToast('3번 모두 오답! 정답 그래프를 5초간 보여줍니다.', 'bad', 2200);
+    // 정답 그래프 표시
+    renderBase();
+    drawLineWithIntercept(canvas, state.func.m, state.func.k, state.base, '#16a34a');
+    setTimeout(()=>{
+      state.problemIndex++;
+      nextProblemM1();
+      renderM1Equation();
+    }, 5000);
+  } else {
+    showToast(`${extraMsg} 남은 시간 -5초. (남은 기회 ${3-state.triesStage2}번)`, 'bad', 3200);
+    // 다시 그릴 수 있게 리셋
+    state.points=[];
+    state.selected=[];
+    state.selectingLine=false;
+    state.canMove=true;
+    const c = document.getElementById('m1Confirm');
+    if(c) c.style.display='none';
+    const b = document.getElementById('m1DrawLine');
+    if(b) b.disabled=true;
+    renderAll();
+  }
+}
+
+/* =========================
+   리사이즈 처리
+========================= */
+function rerenderOnResize(){
+  fixedFormulaScale = null;
+  renderAll();
+}
+window.addEventListener('resize', rerenderOnResize);
+if('visualViewport' in window){
+  window.visualViewport.addEventListener('resize', rerenderOnResize, {passive:true});
+}
+
+/* =========================
+   초기 실행
+========================= */
+window.addEventListener('DOMContentLoaded', ()=>{
+  renderLeaderboard();
+  startMode1();
+});
+
+/* =========================
+   (보너스) Enter로 확인 처리
+========================= */
+document.addEventListener('keydown', (e)=>{
+  if(e.isComposing) return;
+  if(e.key!=='Enter') return;
+
+  const active = document.activeElement;
+  const id = active && active.id;
+
+  // 모드1 1단계: m/k 입력 중 Enter
+  if(id==='m1_m' || id==='m1_k'){
+    const btn = document.getElementById('m1CheckStage1'); if(btn) btn.click();
+  }
+  // 모드2: 입력 중 Enter
+  if(id==='m2x1' || id==='m2y1' || id==='m2x2' || id==='m2y2'){
+    const btn = document.getElementById('m2Check'); if(btn) btn.click();
+  }
+  // 모드3: 입력 중 Enter
+  if(id==='m3x' || id==='m3y'){
+    const btn = document.getElementById('m3Check'); if(btn) btn.click();
+  }
+});
+</script>
+</body>
+</html>
