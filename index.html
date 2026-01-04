@@ -122,7 +122,7 @@
     <div class="title">일차함수와 일차방정식의 관계 형성평가</div>
     <div class="modes" id="modeButtons">
       <button class="mode-btn active" data-mode="eq-to-graph">일차방정식 ⇒ 그래프</button>
-      <button class="mode-btn" data-mode="graph-to-eq">그래프 ⇒ 일차방정식(해 2개)</button>
+      <button class="mode-btn" data-mode="graph-to-eq">그래프 ⇒ 일차방정식</button>
       <button class="mode-btn" data-mode="system">연립방정식 그래프로 풀기</button>
     </div>
   </div>
@@ -453,7 +453,7 @@ function renderLeaderboard(){
   };
   box.innerHTML = `
     ${section('① 일차방정식 ⇒ 그래프', leaderboard.m1)}
-    ${section('② 그래프 ⇒ 해 2개', leaderboard.m2)}
+    ${section('② 그래프 ⇒ 일차방정식', leaderboard.m2)}
     ${section('③ 연립방정식 그래프 풀이', leaderboard.m3)}
   `;
 }
@@ -494,7 +494,7 @@ const state = {
   triesStage1: 0,
   triesStage2: 0,
 
-  // m2: 그래프->해 2개
+  // m2: 그래프->일차방정식
   m2eq: null,      // {a,b,c, form} ax+by=c 기준
   m2pointsAns: null, // 예시용
 
@@ -880,7 +880,7 @@ function goM1Stage2(){
 }
 
 /* =========================
-   모드 2: 그래프 => 일차방정식(해 2개)
+   모드 2: 그래프 => 일차방정식
 ========================= */
 function startMode2(){
   resetTimer();
@@ -890,7 +890,7 @@ function startMode2(){
   state.pending=false;
 
   setRightPanel(`
-    <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+    <h3>그래프 ⇒ 일차방정식</h3>
     <div style="margin:12px 0 10px; font-size:16px;"><b>준비 됐나요?</b></div>
     <div class="controls"><button id="m2ReadyBtn" class="btn">네</button></div>
     <div class="hint">
@@ -920,7 +920,7 @@ function nextProblemM2(){
   state.m2pointsAns = pickTwoIntegerSolutionsNearOrigin(state.m2eq);
 
   setRightPanel(`
-    <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+    <h3>그래프 ⇒ 일차방정식</h3>
     <div class="statbar">
       <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
       <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
@@ -1090,7 +1090,7 @@ function finishMode(which){
   const key = (which==='m1') ? 'm1' : (which==='m2' ? 'm2' : 'm3');
   addRecord(key, state.score);
 
-  const title = (which==='m1') ? '일차방정식 ⇒ 그래프' : (which==='m2' ? '그래프 ⇒ 해 2개' : '연립방정식 그래프로 풀기');
+  const title = (which==='m1') ? '일차방정식 ⇒ 그래프' : (which==='m2' ? '그래프 ⇒ 일차방정식' : '연립방정식 그래프로 풀기');
   setRightPanel(`
     <h3>결과</h3>
     <p style="font-size:16px;">모드: <b>${title}</b></p>
@@ -1150,7 +1150,7 @@ function handleTimeOut(){
     // 예시 해 표시(패널에)
     const ans = state.m2pointsAns;
     setRightPanel(`
-      <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+      <h3>그래프 ⇒ 일차방정식</h3>
       <div class="statbar">
         <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
         <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
@@ -1469,7 +1469,7 @@ document.addEventListener('click', (e)=>{
       const ans = state.m2pointsAns;
       showToast('3번 모두 오답! 예시 정답을 보여줍니다.', 'bad', 2200);
       setRightPanel(`
-        <h3>그래프 ⇒ 일차방정식(해 2개)</h3>
+        <h3>그래프 ⇒ 일차방정식</h3>
         <div class="statbar">
           <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
           <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
@@ -1717,3 +1717,4 @@ document.addEventListener('keydown', (e)=>{
 </script>
 </body>
 </html>
+
