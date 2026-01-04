@@ -554,12 +554,17 @@ function renderAll(){
     drawLineWithIntercept(canvas, m, k, base, '#1d4ed8');
     showEquationOnCanvas(latexForEquation(state.m2eq));
   }
-  if(state.mode==='m3'){
+   if(state.mode==='m3'){
     // L1은 미리 그림
     const L1 = state.sys.L1;
     const {m:k_m, k:k_b} = lineFromABC(L1.a,L1.b,L1.c);
     drawLineWithIntercept(canvas, k_m, k_b, base, '#1d4ed8');
     showEquationOnCanvas(latexForSystem(state.sys.L1, state.sys.L2));
+
+    // ✅ (추가) 두 번째 직선을 "확정"했다면, 그 직선을 계속 표시
+    if(state.m3_drawnLine2){
+      drawLineWithIntercept(canvas, state.m3_drawnLine2.m, state.m3_drawnLine2.k, base, '#0ea5e9');
+    }
 
     // 학생이 찍은 점(두 점)
     for(const p of state.points) drawPoint(canvas, p.x, p.y, base, '#111827');
@@ -575,17 +580,31 @@ function renderAll(){
       }
     }
 
-    // 학생이 "선 확정"까지 끝냈다면(두 점 확정) 교점 표시(정답 교점)
+    // 학생이 "선 확정"까지 끝냈다면(두 점 확정) 교점 표시(학생이 그린 선 ∩ L1)
     if(state.m3_drawnLine2){
-      drawPoint(canvas, state.sys.sol.x, state.sys.sol.y, base, '#16a34a');
+      const L1mk = lineFromABC(state.sys.L1.a, state.sys.L1.b, state.sys.L1.c);
+      const inter = intersectMK(L1mk.m, L1mk.k, state.m3_drawnLine2.m, state.m3_drawnLine2.k);
+      if(inter){
+        drawPoint(canvas, inter.x, inter.y, base, '#16a34a');
+      }
     }
+
   }
+
 }
 
 /* =========================
    문제 생성 로직
 ========================= */
 const COEFF_POOL = [1,2,3,4,5,6,-1,-2,-3,-4,-5,-6];
+
+// ✅ m1/m2 전용 상수항 풀: -9~9 중 0, -7, 7 제외
+const C_POOL_M12 = [];
+for(let i=-9;i<=9;i++){
+  if(i===0 || i===-7 || i===7) continue;
+  C_POOL_M12.push(i);
+}
+
 
 function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
@@ -607,11 +626,46 @@ function makeEquationWithSolution(){
   return {a,b,c,form, sample:{x:x0,y:y0}};
 }
 
+// ✅ m1/m2 전용: 상수항 c를 작게(-9~9, 0/-7/7 제외) 만들되 정수해가 존재하도록 생성
+function makeEquationForM12(){
+  while(true){
+    const a = randChoice(COEFF_POOL);
+    const b = randChoice(COEFF_POOL.filter(v=>v!==0));
+    const c = randChoice(C_POOL_M12);
+
+    const x0 = randInt(-6,6);
+    const num = c - a*x0;
+
+    // y0가 정수여야 함
+    if(num % b !== 0) continue;
+    const y0 = num / b;
+
+    // y0도 범위 제한
+    if(y0 < -6 || y0 > 6) continue;
+    if(x0===0 && y0===0) continue;
+
+    const form = (Math.random()<0.5) ? 'eq' : 'eq0';
+    return {a,b,c,form, sample:{x:x0,y:y0}};
+  }
+}
+
+
 function lineFromABC(a,b,c){
   // ax+by=c -> y = (-a/b)x + (c/b)
   const m = -a/b;
   const k = c/b;
   return {m,k};
+}
+
+function intersectMK(m1,k1,m2,k2){
+  // y=m1x+k1, y=m2x+k2 교점
+  const eps = 1e-12;
+  if(!isFinite(m1) || !isFinite(m2)) return null; // (이 앱에서는 수직선 안 나오도록 설계라 일단 제외)
+  if(Math.abs(m1 - m2) < eps) return null;        // 평행/일치
+  const x = (k2 - k1) / (m1 - m2);
+  const y = m1*x + k1;
+  if(!isFinite(x) || !isFinite(y)) return null;
+  return {x, y};
 }
 
 function latexForEquation(eq){
@@ -657,30 +711,42 @@ function latexForSystem(L1, L2){
 }
 
 function makeSystemWithIntegerIntersection(){
-  // 해 (x,y) 정수, |x|,|y|<=7
-  const x = randInt(-7,7);
-  const y = randInt(-7,7);
-  const sol = {x,y};
+  // ✅ y절편 제한: |k| <= 9 를 두 식 모두 만족
+  const K_LIMIT = 9;
 
-  // 두 직선: b!=0, 서로 평행X
-  let a1,b1,a2,b2;
   while(true){
-    a1 = randChoice(COEFF_POOL);
-    b1 = randChoice(COEFF_POOL.filter(v=>v!==0));
-    a2 = randChoice(COEFF_POOL);
-    b2 = randChoice(COEFF_POOL.filter(v=>v!==0));
-    // 평행(비례) 방지
-    if(a1*b2 === a2*b1) continue;
-    break;
+    // 해 (x,y) 정수, |x|,|y|<=7
+    const x = randInt(-7,7);
+    const y = randInt(-7,7);
+    const sol = {x,y};
+
+    // 두 직선: b!=0, 서로 평행X
+    let a1,b1,a2,b2;
+    while(true){
+      a1 = randChoice(COEFF_POOL);
+      b1 = randChoice(COEFF_POOL.filter(v=>v!==0));
+      a2 = randChoice(COEFF_POOL);
+      b2 = randChoice(COEFF_POOL.filter(v=>v!==0));
+      if(a1*b2 === a2*b1) continue; // 평행 방지
+      break;
+    }
+
+    const c1 = a1*x + b1*y;
+    const c2 = a2*x + b2*y;
+
+    // ✅ y절편 k = c/b 가 -9~9 안에 드는지 검사
+    const k1 = c1 / b1;
+    const k2 = c2 / b2;
+    if(!isFinite(k1) || !isFinite(k2)) continue;
+    if(Math.abs(k1) > K_LIMIT || Math.abs(k2) > K_LIMIT) continue;
+
+    const L1 = {a:a1,b:b1,c:c1,form:(Math.random()<0.5?'eq':'eq0')};
+    const L2 = {a:a2,b:b2,c:c2,form:(Math.random()<0.5?'eq':'eq0')};
+
+    return {L1,L2,sol};
   }
-  const c1 = a1*x + b1*y;
-  const c2 = a2*x + b2*y;
-
-  const L1 = {a:a1,b:b1,c:c1,form:(Math.random()<0.5?'eq':'eq0')};
-  const L2 = {a:a2,b:b2,c:c2,form:(Math.random()<0.5?'eq':'eq0')};
-
-  return {L1,L2,sol};
 }
+
 
 /* =========================
    모드 1: 일차방정식 => 그래프 (2단계 공유 타이머)
@@ -715,7 +781,8 @@ function nextProblemM1(){
     finishMode('m1');
     return;
   }
-  state.eq = makeEquationWithSolution();
+state.eq = makeEquationForM12();
+
 
   // 정답 함수식
   state.func = lineFromABC(state.eq.a, state.eq.b, state.eq.c);
@@ -835,48 +902,25 @@ function mountM1ExplainMath(){
   else math.textContent = tex;
 }
 
-function goM1Stage2(){
-  state.stage = 2;
-  state.triesStage2 = 0;
 
-  // 점 2개로 선
-  state.points=[];
-  state.selectingLine=false;
-  state.selected=[];
-  state.canMove=true;
+function renderM1Stage2FuncLatex(){
+  const el = document.getElementById('m1FuncLatex');
+  if(!el) return;
 
-  setRightPanel(`
-    <h3>일차방정식 ⇒ 그래프</h3>
-    <div class="statbar">
-      <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
-      <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
-      <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
-    </div>
+  // y = mx + k 를 LaTeX로 만들기 (k가 음수면 + (-k) 말고 - 로 보이게)
+  const mTex = fmtRational(state.func.m);
+  const kVal = state.func.k;
+  const kAbsTex = fmtRational(Math.abs(kVal));
+  const tex = (kVal >= 0)
+    ? `y = ${mTex}x + ${kAbsTex}`
+    : `y = ${mTex}x - ${kAbsTex}`;
 
-    <div style="margin:8px 0 6px; font-size:16px;">
-      <b>2단계:</b> 방금 구한 <b>y = ${fmtRational(state.func.m)}x + ${fmtRational(state.func.k)}</b> 의 그래프를 그리세요.
-    </div>
-    <div class="hint">
-      - 격자점(정수 좌표)을 <b>2개</b> 찍고, <b>선 그리기</b>로 직선을 만든 뒤 확인하세요.<br/>
-      - 오답이면 <b>-5초</b>, 기회는 <b>3번</b>.<br/>
-      - 정답이면 <b>남은 시간만큼 점수</b>를 얻습니다.
-    </div>
-
-    <div class="controls">
-      <button id="m1DrawLine" class="btn" disabled>선 그리기</button>
-    </div>
-
-    <div id="m1Confirm" class="confirm">
-      <p>이대로 그래프 그리기를 마칠까요?</p>
-      <div class="controls">
-        <button id="m1Yes" class="btn">네</button>
-        <button id="m1No" class="btn ghost">아니요</button>
-      </div>
-    </div>
-  `);
-
-  renderAll();
-  updateHUD();
+  el.innerHTML = '';
+  if(window.katex){
+    window.katex.render(tex, el, { throwOnError:false, displayMode:false, output:'html' });
+  }else{
+    el.textContent = tex;
+  }
 }
 
 /* =========================
@@ -911,7 +955,8 @@ function nextProblemM2(){
     finishMode('m2');
     return;
   }
-  state.m2eq = makeEquationWithSolution();
+state.m2eq = makeEquationForM12();
+
   state.timeLeft = state.perTime;
   updateHUD();
   startTimer();
@@ -1018,6 +1063,53 @@ function startMode3(){
   state.canMove=true;
   state.m3_drawnLine2=null;
   renderAll();
+}
+function goM1Stage2(){
+  state.stage = 2;
+  state.triesStage2 = 0;
+
+  // 점 2개로 선
+  state.points=[];
+  state.selectingLine=false;
+  state.selected=[];
+  state.canMove=true;
+
+  setRightPanel(`
+    <h3>일차방정식 ⇒ 그래프</h3>
+    <div class="statbar">
+      <div class="chip">남은 문제: <b id="remainCount">${state.gameLen - state.problemIndex}</b> / ${state.gameLen}</div>
+      <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
+      <div class="chip">남은 시간: <b id="timeLeft">${state.timeLeft}</b>s</div>
+    </div>
+
+    <div style="margin:8px 0 6px; font-size:16px;">
+      <b>2단계:</b> 방금 구한 <span id="m1FuncLatex"></span> 의 그래프를 그리세요.
+    </div>
+
+    <div class="hint">
+      - 격자점(정수 좌표)을 <b>2개</b> 찍고, <b>선 그리기</b>로 직선을 만든 뒤 확인하세요.<br/>
+      - 오답이면 <b>-5초</b>, 기회는 <b>3번</b>.<br/>
+      - 정답이면 <b>남은 시간만큼 점수</b>를 얻습니다.
+    </div>
+
+    <div class="controls">
+      <button id="m1DrawLine" class="btn" disabled>선 그리기</button>
+    </div>
+
+    <div id="m1Confirm" class="confirm">
+      <p>이대로 그래프 그리기를 마칠까요?</p>
+      <div class="controls">
+        <button id="m1Yes" class="btn">네</button>
+        <button id="m1No" class="btn ghost">아니요</button>
+      </div>
+    </div>
+  `);
+
+  renderAll();
+  updateHUD();
+
+  // ✅ 2단계 함수식 KaTeX 렌더
+  renderM1Stage2FuncLatex();
 }
 
 function nextProblemM3(){
@@ -1717,4 +1809,5 @@ document.addEventListener('keydown', (e)=>{
 </script>
 </body>
 </html>
+
 
